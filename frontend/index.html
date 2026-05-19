@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Visualizador CVRP - Control Manual</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+    <style>
+        :root { --bg-color: #0f172a; --panel-bg: #1e293b; --accent: #3b82f6; --success: #10b981; --warning: #f59e0b; --danger: #ef4444; --text-main: #f8fafc; --text-muted: #94a3b8; }
+        body { font-family: 'Segoe UI', system-ui, sans-serif; background-color: var(--bg-color); color: var(--text-main); display: flex; flex-direction: column; align-items: center; padding: 20px; margin: 0; }
+        h1 { color: var(--success); margin-bottom: 5px; text-align: center; font-size: 28px;}
+        .dashboard { display: flex; gap: 20px; margin-bottom: 20px; width: 1100px; }
+        .panel { background: var(--panel-bg); padding: 25px; border-radius: 12px; flex: 1; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.5); z-index: 1000; border: 1px solid #334155; }
+        
+        #mapa { width: 1100px; height: 550px; border-radius: 12px; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.5); border: 2px solid #334155; background-color: #0f172a; }
+        
+        /* Estilos de Controles Manuales */
+        .control-group { margin-bottom: 15px; background: rgba(0,0,0,0.2); padding: 12px; border-radius: 8px; border: 1px solid #334155;}
+        .control-header { display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 14px; font-weight: bold; color: var(--text-muted);}
+        .val-display { color: var(--accent); font-size: 16px; }
+        
+        input[type=range] { width: 100%; cursor: pointer; accent-color: var(--accent); }
+
+        .btn-group { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 20px; }
+        button { border: none; padding: 12px; border-radius: 8px; cursor: pointer; font-weight: bold; color: white; transition: all 0.2s; font-size: 15px; display: flex; align-items: center; justify-content: center; gap: 8px;}
+        button:disabled { opacity: 0.5; cursor: not-allowed; filter: grayscale(1); }
+        button:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 4px 6px rgba(0,0,0,0.3); filter: brightness(1.1);}
+        
+        .btn-start { background: var(--success); grid-column: span 2; font-size: 18px; padding: 15px;}
+        .btn-pause { background: var(--warning); color: #1e293b; }
+        .btn-resume { background: var(--accent); }
+        .btn-clear { background: var(--danger); grid-column: span 2;}
+
+        .log-box { height: 260px; overflow-y: auto; background: #0b1120; padding: 15px; font-family: 'Consolas', monospace; font-size: 13px; margin-top: 10px; border-radius: 8px; border: 1px solid #334155; line-height: 1.5; }
+        .log-poda { color: #fca5a5; }
+        .log-mejor { color: #6ee7b7; }
+        .log-info { color: #93c5fd; }
+        .badge { padding: 4px 10px; border-radius: 12px; font-size: 12px; font-weight: 600; background: #334155; color: white;}
+    </style>
+</head>
+<body>
+
+    <h1>🚚 CVRP Ibagué: Panel de Control Interactivo</h1>
+    <p style="margin-top:0; color:var(--text-muted);">Ajusta la capacidad del vehículo para alterar la Programación Dinámica y el Ruteo</p>
+    
+    <div class="dashboard">
+        <div class="panel" style="flex: 1.2;">
+            <h3 style="margin-top: 0; color: #e2e8f0; border-bottom: 2px solid #334155; padding-bottom: 10px;">⚙️ Ajustes del Sistema</h3>
+            
+            <div class="control-group">
+                <div class="control-header">
+                    <span>📦 Capacidad del Camión (DP)</span>
+                    <span class="val-display"><span id="valCapacidad">80</span> kg</span>
+                </div>
+                <input type="range" id="inputCapacidad" min="20" max="150" step="5" value="80" 
+                       oninput="document.getElementById('valCapacidad').innerText = this.value">
+                <div style="font-size: 11px; color: var(--text-muted); margin-top: 5px;">*A mayor capacidad, más paquetes selecciona la Mochila y más compleja es la ruta.</div>
+            </div>
+
+            <div class="control-group">
+                <div class="control-header">
+                    <span>⚡ Velocidad del GPS</span>
+                    <span class="val-display"><span id="valVelocidad">150</span> ms</span>
+                </div>
+                <input type="range" id="speed" min="5" max="1000" value="150"
+                       oninput="document.getElementById('valVelocidad').innerText = this.value">
+            </div>
+            
+            <div class="btn-group">
+                <button class="btn-start" id="btnStart" onclick="App.iniciarSimulacion()">▶ Iniciar Simulación</button>
+                <button class="btn-pause" id="btnPause" onclick="App.pausarSimulacion()" disabled>⏸ Pausar</button>
+                <button class="btn-resume" id="btnResume" onclick="App.reanudarSimulacion()" disabled>⏯ Reanudar</button>
+                <button class="btn-clear" id="btnClear" onclick="App.limpiarMapa()">⏹ Resetear Mapa</button>
+            </div>
+        </div>
+
+        <div class="panel" style="flex: 1.8;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                <h3 style="margin: 0; color: #e2e8f0;">📊 Resultados en Tiempo Real</h3>
+                <div>
+                    <span class="badge">Nodos: <span id="lblElegidos">--</span></span>
+                    <span class="badge" style="background:var(--accent)">Peso: <span id="lblPeso">--</span> kg</span>
+                </div>
+            </div>
+
+            <div style="display: flex; gap: 15px; margin-bottom: 10px;">
+                <div style="flex: 1; background: rgba(0,0,0,0.2); padding: 10px; border-radius: 8px; border-left: 4px solid var(--info);">
+                    <div style="font-size: 12px; color: var(--text-muted);">Límite Voraz (Poda)</div>
+                    <div style="font-size: 18px; font-weight: bold; color: var(--info);"><span id="lblVoraz">--</span> km</div>
+                </div>
+                <div style="flex: 1; background: rgba(0,0,0,0.2); padding: 10px; border-radius: 8px; border-left: 4px solid var(--success);">
+                    <div style="font-size: 12px; color: var(--text-muted);">Mejor Ruta Actual</div>
+                    <div style="font-size: 18px; font-weight: bold; color: var(--success);"><span id="lblOptima">--</span> km</div>
+                </div>
+            </div>
+
+            <div id="log" class="log-box">Satélite conectado. Configura tu camión e inicia...</div>
+        </div>
+    </div>
+
+    <div id="mapa"></div>
+
+    <script>
+        const DOM = {
+            log: document.getElementById('log'),
+            speed: document.getElementById('speed'),
+            inputCapacidad: document.getElementById('inputCapacidad'),
+            btnStart: document.getElementById('btnStart'),
+            btnPause: document.getElementById('btnPause'),
+            btnResume: document.getElementById('btnResume')
+        };
+
+        // Configuración Leaflet
+        let map = L.map('mapa').setView([4.4385, -75.2341], 13);
+        L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', { attribution: '&copy; OpenStreetMap' }).addTo(map);
+
+        let layerMarcadores = L.layerGroup().addTo(map);
+        let layerRutaActiva = L.layerGroup().addTo(map);
+        let layerHistorialRutas = L.layerGroup().addTo(map);
+
+        const Graficos = {
+            nodosRutear: [],
+
+            dibujarNodos(totales, rutear) {
+                layerMarcadores.clearLayers();
+                this.nodosRutear = rutear;
+
+                totales.forEach(n => {
+                    L.circleMarker([n.lat, n.lon], { radius: 4, color: '#475569', fillColor: '#1e293b', fillOpacity: 0.8 })
+                     .bindPopup(`<b>${n.nombre}</b><br>Descartado`).addTo(layerMarcadores);
+                });
+
+                rutear.forEach(n => {
+                    const isBodega = n.id === 0;
+                    L.circleMarker([n.lat, n.lon], {
+                        radius: isBodega ? 9 : 6,
+                        color: isBodega ? '#f59e0b' : '#10b981',
+                        fillColor: isBodega ? '#f59e0b' : '#10b981',
+                        fillOpacity: 1
+                    }).bindPopup(`<b>${n.nombre}</b><br>Peso: ${n.peso_kg}kg | Prio: ${n.prioridad}`).addTo(layerMarcadores);
+                });
+            },
+
+            dibujarRuta(rutaIndices, color, tipo, grosor = 3) {
+                if (tipo === 'explorar' || tipo === 'retroceso') layerRutaActiva.clearLayers();
+                if (rutaIndices.length < 2) return;
+
+                const coords = rutaIndices.map(i => [this.nodosRutear[i].lat, this.nodosRutear[i].lon]);
+                const polilinea = L.polyline(coords, { color: color, weight: grosor, opacity: 0.8, dashArray: tipo === 'retroceso' ? '5, 5' : null });
+
+                if (tipo === 'explorar' || tipo === 'retroceso') polilinea.addTo(layerRutaActiva);
+                else polilinea.addTo(layerHistorialRutas);
+            }
+        };
+
+        const App = {
+            timeoutId: null, isPaused: false, historial: [], optima: null, indice: 0,
+
+            escribirLog(texto, clase = '') {
+                const el = document.createElement('div');
+                el.className = clase; el.innerText = texto;
+                DOM.log.appendChild(el); DOM.log.scrollTop = DOM.log.scrollHeight;
+            },
+
+            cambiarEstadoBotones(jugando) {
+                DOM.btnStart.innerText = jugando ? "🔄 Reiniciar Simulación" : "▶ Iniciar Simulación";
+                DOM.btnPause.disabled = !jugando || this.isPaused;
+                DOM.btnResume.disabled = !this.isPaused;
+                DOM.inputCapacidad.disabled = jugando; // Bloquear slider mientras se ejecuta
+            },
+
+            limpiarMapa() {
+                if(this.timeoutId) clearTimeout(this.timeoutId);
+                this.isPaused = false;
+                layerRutaActiva.clearLayers(); layerHistorialRutas.clearLayers();
+                DOM.log.innerHTML = '';
+                this.escribirLog("Sistema reseteado. Ajusta las variables y comienza.", "log-info");
+                this.cambiarEstadoBotones(false);
+                document.getElementById('lblVoraz').innerText = "--";
+                document.getElementById('lblOptima').innerText = "--";
+            },
+
+            async iniciarSimulacion() {
+                this.limpiarMapa();
+                const capacidad = DOM.inputCapacidad.value;
+                this.escribirLog(`1. Ejecutando DP (Mochila) con límite de ${capacidad} kg...`, "log-mejor");
+
+                try {
+                    // ENVIANDO EL PARÁMETRO MANUAL A PYTHON
+                    const req = await fetch(`http://127.0.0.1:5000/api/simular?capacidad=${capacidad}`);
+                    const data = await req.json();
+                    
+                    document.getElementById('lblElegidos').innerText = data.stats.elegidos;
+                    document.getElementById('lblPeso').innerText = data.stats.peso;
+                    document.getElementById('lblVoraz').innerText = data.voraz.distancia;
+                    
+                    Graficos.dibujarNodos(data.nodos_totales, data.nodos_rutear);
+                    
+                    this.escribirLog(`2. Mochila seleccionó ${data.stats.elegidos} paquetes VIP (${data.stats.peso} kg en total).`);
+                    this.escribirLog(`3. Voraz estimó ruta rápida en ${data.voraz.distancia} km.`);
+                    this.escribirLog("4. Iniciando GPS Backtracking (Poda Activa)...");
+                    
+                    this.historial = data.historial; this.optima = data.optima; this.indice = 0; this.isPaused = false;
+                    this.cambiarEstadoBotones(true); this.animar();
+
+                } catch (e) {
+                    this.escribirLog("Error: Enciende la consola Python (app.py).", "log-poda");
+                }
+            },
+
+            pausarSimulacion() { this.isPaused = true; if(this.timeoutId) clearTimeout(this.timeoutId); this.escribirLog("⏸ PAUSA MANUAL.", "log-warning"); this.cambiarEstadoBotones(true); },
+            reanudarSimulacion() { this.isPaused = false; this.escribirLog("▶ REANUDADO.", "log-info"); this.cambiarEstadoBotones(true); this.animar(); },
+
+            animar() {
+                if (this.isPaused) return;
+
+                if (this.indice >= this.historial.length) {
+                    layerRutaActiva.clearLayers();
+                    Graficos.dibujarRuta(this.optima.ruta, '#10b981', 'ganadora', 5);
+                    this.escribirLog(`✅ RUTA ÓPTIMA DEFINITIVA: ${this.optima.distancia} km`, 'log-mejor');
+                    document.getElementById('lblOptima').innerText = this.optima.distancia;
+                    this.cambiarEstadoBotones(false);
+                    DOM.inputCapacidad.disabled = false; // Liberar slider
+                    return;
+                }
+
+                const paso = this.historial[this.indice];
+
+                switch(paso.accion) {
+                    case 'explorar': Graficos.dibujarRuta(paso.ruta, '#3b82f6', 'explorar', 3); break;
+                    case 'poda':
+                        Graficos.dibujarRuta(paso.ruta, '#ef4444', 'poda', 3);
+                        this.escribirLog(`✂️ PODA: Ruta muy larga (> ${paso.mejor_distancia_actual}km)`, 'log-poda');
+                        break;
+                    case 'nueva_mejor':
+                        layerHistorialRutas.clearLayers();
+                        Graficos.dibujarRuta(paso.ruta, '#10b981', 'nueva_mejor', 4);
+                        this.escribirLog(`🏆 NUEVA MEJOR RUTA: ${paso.distancia}km`, 'log-mejor');
+                        document.getElementById('lblOptima').innerText = paso.distancia;
+                        break;
+                    case 'retroceso': Graficos.dibujarRuta(paso.ruta, '#64748b', 'retroceso', 2); break;
+                }
+
+                this.indice++;
+                this.timeoutId = setTimeout(() => this.animar(), DOM.speed.value);
+            }
+        };
+    </script>
+</body>
+</html>
