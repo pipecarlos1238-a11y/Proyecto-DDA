@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>OptiRuta+ Ibagué</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/cytoscape/3.28.1/cytoscape.min.js"></script>
+    <link rel="stylesheet" href="/OPTIRUTA_PLUS/frontend/style.css" />
+</head>
+<body>
+    <div id="mapa"></div>
+
+    <div class="top-dashboard">
+        <div class="dash-box"><span>🚚 Vehículo</span><strong id="dashVehiculo">Van</strong></div>
+        <div class="dash-box"><span>📦 Paquetes</span><strong id="dashPaquetes">0</strong></div>
+        <div class="dash-box"><span>⚖️ Peso Total</span><strong><span id="dashPeso">0</span> kg</strong></div>
+        <div class="dash-box"><span>📐 Volumen</span><strong><span id="dashVolumen">0</span> m³</strong></div>
+        <div class="dash-box highlight"><span>📍 Distancia Total</span><strong><span id="lblOptima">--</span> km</strong></div>
+        <div class="dash-box highlight-time"><span>⏱️ Tiempo Estimado</span><strong><span id="lblTiempo">--</span> min</strong></div>
+    </div>
+
+    <div id="panelRuta" class="ruta-panel">
+        <h3>📋 Orden de Entrega</h3>
+        <ol id="listaRuta"></ol>
+    </div>
+
+    <div id="treePanel" class="tree-panel">
+        <div class="tree-header">
+            <h3>🌳 Árbol de Backtracking</h3>
+            <div class="tree-stats">
+                <span class="stat-nodos">📊 Nodos: <span id="statNodos">0</span></span>
+                <span class="stat-poda">↩️ Backtracks: <span id="statPoda">0</span></span>
+                <span class="stat-mejoras">✨ Mejoras: <span id="statMejoras">0</span></span>
+            </div>
+        </div>
+        <div id="tree-canvas"></div>
+    </div>
+
+    <div class="sidebar">
+        <div>
+            <h1>📦 OPTIRUTA +</h1>
+            <p class="subtitle">Gestión de Paquetes y Optimización</p>
+        </div>
+
+        <div class="control-group">
+            <label>1. Seleccionar Vehículo:</label>
+            <div class="flota-container">
+                <div class="vehiculo-btn" id="v-moto" onclick="App.seleccionarVehiculo('Moto', 25)">
+                    <span class="vehiculo-title">🏍️ Moto</span><span class="vehiculo-cap">25 kg | 0.5m³</span>
+                </div>
+                <div class="vehiculo-btn active" id="v-van" onclick="App.seleccionarVehiculo('Van', 60)">
+                    <span class="vehiculo-title">🚐 Van</span><span class="vehiculo-cap">60 kg | 2.5m³</span>
+                </div>
+                <div class="vehiculo-btn" id="v-camion" onclick="App.seleccionarVehiculo('Camión', 130)">
+                    <span class="vehiculo-title">🚛 Camión</span><span class="vehiculo-cap">130 kg | 6.0m³</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="control-group">
+            <label>2. Asignación de Paquetes:</label>
+            <select id="modoSeleccion" onchange="App.cambiarModo()" style="width: 100%; padding: 8px; border-radius: 6px; background: rgba(0,0,0,0.5); color: white; border: 1px solid #334155;">
+                <option value="auto">Automático (DP Mochila)</option>
+                <option value="manual">Manual (Clica en el mapa o tabla)</option>
+            </select>
+        </div>
+
+        <button class="btn-start" id="btnStart" onclick="App.iniciarCalculo()">🎯 Optimizar Ruta</button>
+        
+        <div class="btn-grid" style="margin-top: 10px;">
+            <button class="btn-pause" id="btnPause" onclick="App.pausarSimulacion()" disabled>⏸ Pausar</button>
+            <button class="btn-resume" id="btnResume" onclick="App.reanudarSimulacion()" disabled>⏯ Reanudar</button>
+            <button class="btn-clear" id="btnClear" onclick="App.limpiarTodo()" style="grid-column: span 2;">⏹ Limpiar Todo</button>
+        </div>
+
+        <button id="btnExportar" onclick="App.exportarHojaRuta()">📄 Descargar Hoja de Ruta (TXT)</button>
+        <div id="log" class="log-box">Satélite conectado. Selecciona vehículo y presiona Optimizar...</div>
+    </div>
+
+    <div class="bottom-panel">
+        <div class="table-header">
+            <h3>📑 Paquetes Disponibles en Bodega</h3>
+            <span id="lblSeleccionadosTabla" style="color: var(--success); font-weight: bold;">0 seleccionados</span>
+        </div>
+        <div class="table-wrapper">
+            <table>
+                <thead>
+                    <tr><th>✓</th><th>ID</th><th>Cliente</th><th>Destino</th><th>Peso (kg)</th><th>Volumen (m³)</th><th>Prioridad</th></tr>
+                </thead>
+                <tbody id="tablaPaquetesBody"></tbody>
+            </table>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>

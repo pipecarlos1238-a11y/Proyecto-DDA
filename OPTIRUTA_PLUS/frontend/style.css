@@ -1,0 +1,189 @@
+/* ==========================================
+   1. COLORES Y AJUSTES GENERALES
+   ========================================== */
+
+/* Guardamos los colores aquí para no tener que memorizar los códigos raros. 
+   Si algún día quieres cambiar el verde de éxito, lo cambias solo aquí. */
+:root { 
+    --bg-panel: rgba(15, 23, 42, 0.85); /* Fondo oscuro medio transparente */
+    --bg-table: rgba(15, 23, 42, 0.95); /* Fondo casi sólido para la tabla */
+    --accent: #3b82f6;   /* Azul principal */
+    --success: #10b981;  /* Verde (Rutas listas, selecciones) */
+    --warning: #f59e0b;  /* Naranja (Bodega, Pausa) */
+    --danger: #ef4444;   /* Rojo (Errores, Podas) */
+    --text-main: #f8fafc; /* Blanco hueso para que no canse la vista */
+}
+
+/* Quitamos márgenes por defecto y hacemos que todo ocupe la pantalla completa sin barras de scroll */
+body, html { 
+    margin: 0; padding: 0; 
+    width: 100%; height: 100%; 
+    font-family: 'Segoe UI', system-ui, sans-serif; 
+    background: #000; 
+    overflow: hidden; 
+}
+
+/* El mapa va al fondo de todo, ocupando el 100% de la pantalla */
+#mapa { position: absolute; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 1; }
+
+
+/* ==========================================
+   2. PANELES PRINCIPALES (Efecto Cristal)
+   ========================================== */
+
+/* PANEL IZQUIERDO (Donde están los botones y controles) */
+.sidebar { 
+    position: absolute; top: 20px; left: 20px; width: 350px; max-height: 90vh; overflow-y: auto; 
+    background: var(--bg-panel); 
+    backdrop-filter: blur(10px); /* Este es el efecto cristal/vidrio empañado */
+    z-index: 1000; border-radius: 12px; padding: 20px; 
+    border: 1px solid rgba(255,255,255,0.1); box-shadow: 0 10px 30px rgba(0,0,0,0.5); 
+    color: var(--text-main); display: flex; flex-direction: column; gap: 12px; 
+}
+.sidebar::-webkit-scrollbar { display: none; } /* Oculta la barra de scroll para que se vea más limpio */
+
+
+/* BARRA SUPERIOR (Donde salen los totales de peso, volumen, etc.) */
+.top-dashboard { 
+    position: absolute; top: 20px; left: 390px; right: 20px; 
+    background: var(--bg-panel); backdrop-filter: blur(10px); z-index: 1000; 
+    border-radius: 12px; padding: 15px 25px; border: 1px solid rgba(255,255,255,0.1); 
+    box-shadow: 0 10px 30px rgba(0,0,0,0.5); display: flex; justify-content: space-between; 
+    color: var(--text-main); 
+}
+
+/* Las cajitas individuales dentro de la barra superior */
+.dash-box { display: flex; flex-direction: column; align-items: flex-start; }
+.dash-box span { font-size: 11px; color: #94a3b8; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 4px;}
+.dash-box strong { font-size: 20px; font-weight: bold; }
+.dash-box.highlight strong { color: var(--success); } /* Verde para distancia */
+.dash-box.highlight-time strong { color: #c084fc; }  /* Morado para el tiempo */
+
+
+/* PANEL INFERIOR (La tabla gigante de paquetes) */
+.bottom-panel { 
+    position: absolute; bottom: 20px; left: 390px; right: 20px; 
+    background: var(--bg-table); backdrop-filter: blur(10px); z-index: 1000; 
+    border-radius: 12px; border: 1px solid rgba(255,255,255,0.1); 
+    box-shadow: 0 -10px 30px rgba(0,0,0,0.5); color: var(--text-main); 
+    display: flex; flex-direction: column; height: 30vh; overflow: hidden; 
+}
+
+/* ==========================================
+   3. ESTILOS DE LA TABLA DE PAQUETES
+   ========================================== */
+
+.table-header { padding: 15px 20px; border-bottom: 1px solid rgba(255,255,255,0.1); display: flex; justify-content: space-between; align-items: center; background: rgba(0,0,0,0.2);}
+.table-header h3 { margin: 0; font-size: 15px; color: var(--success); }
+.table-wrapper { overflow-y: auto; flex-grow: 1; }
+
+/* Scrollbar personalizada para la tabla */
+.table-wrapper::-webkit-scrollbar { width: 8px; }
+.table-wrapper::-webkit-scrollbar-thumb { background: #334155; border-radius: 4px; }
+
+table { width: 100%; border-collapse: collapse; font-size: 13px; text-align: left; }
+
+/* El encabezado de la tabla (th) se queda pegado arriba al hacer scroll */
+th { position: sticky; top: 0; background: #0f172a; padding: 10px 20px; color: #94a3b8; font-weight: 600; border-bottom: 1px solid #334155; z-index: 2;}
+td { padding: 10px 20px; border-bottom: 1px solid rgba(255,255,255,0.05); }
+
+/* Efecto cuando pasas el mouse por una fila */
+tr:hover { background: rgba(255,255,255,0.02); }
+/* Efecto cuando seleccionas una fila (Pinta un borde verde) */
+tr.selected { background: rgba(16, 185, 129, 0.1); border-left: 3px solid var(--success); }
+
+/* Colores para las letras de prioridad */
+.pri-URGENTE { color: var(--danger); font-weight: bold; }
+.pri-ALTA { color: var(--warning); font-weight: bold; }
+.pri-MEDIA { color: var(--accent); }
+.pri-BAJA { color: #94a3b8; }
+
+
+/* ==========================================
+   4. PANELES LATERALES DERECHOS (Ruta y Árbol)
+   ========================================== */
+
+/* El cuadrito que te dice el orden exacto de entrega */
+.ruta-panel { 
+    position: absolute; top: 100px; right: 20px; width: 320px; max-height: calc(70vh - 120px); 
+    overflow-y: auto; background: var(--bg-panel); backdrop-filter: blur(10px); z-index: 1000; 
+    border-radius: 12px; padding: 20px; border: 1px solid rgba(255,255,255,0.1); 
+    display: none; /* Está oculto hasta que se calcule la ruta */
+    color: white; font-size: 13px;
+}
+.ruta-panel::-webkit-scrollbar { display: none; }
+.ruta-panel h3 { margin-top: 0; color: white; font-size: 15px; border-bottom: 1px solid #334155; padding-bottom: 8px; margin-bottom: 15px;}
+.ruta-panel ol { padding-left: 20px; margin: 0; }
+.ruta-panel li { margin-bottom: 12px; line-height: 1.4; border-bottom: 1px dashed rgba(255,255,255,0.1); padding-bottom: 8px; }
+
+/* El nuevo panel donde se dibuja el Árbol de Backtracking */
+.tree-panel { 
+    position: absolute; top: 100px; right: 350px; width: 340px; height: calc(70vh - 120px); 
+    background: var(--bg-panel); backdrop-filter: blur(10px); z-index: 1000; 
+    border-radius: 12px; padding: 15px; border: 1px solid rgba(255,255,255,0.1); 
+    display: none; flex-direction: column; color: white; font-size: 13px; 
+}
+
+/* El lienzo negrito donde se pinta el árbol */
+#tree-canvas { flex-grow: 1; width: 100%; border-radius: 8px; background: rgba(0,0,0,0.2); }
+
+/* La nueva barra de estadísticas arriba del árbol */
+.tree-header { display: flex; flex-direction: column; gap: 10px; border-bottom: 1px solid #334155; padding-bottom: 10px; margin-bottom: 10px; }
+.tree-header h3 { margin: 0; color: var(--success); font-size: 15px; border: none; padding: 0; }
+.tree-stats { display: flex; justify-content: space-between; font-size: 11px; background: rgba(0,0,0,0.4); padding: 8px 10px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.05); }
+.stat-nodos { color: #60a5fa; font-weight: bold; }   /* Azul para nodos */
+.stat-poda { color: #f87171; font-weight: bold; }    /* Rojo para podas */
+.stat-mejoras { color: #fbbf24; font-weight: bold; } /* Amarillo para mejoras */
+
+
+/* ==========================================
+   5. BOTONES, TÍTULOS Y CONTROLES
+   ========================================== */
+
+h1 { margin: 0; font-size: 22px; color: white; text-align: center; font-weight: 800; letter-spacing: 1px;}
+p.subtitle { margin: 0; font-size: 13px; color: #94a3b8; text-align: center; margin-bottom: 5px; }
+
+/* Controles que agrupan cosas (ej: Elegir vehículo) */
+.control-group { background: rgba(0,0,0,0.3); padding: 10px; border-radius: 10px; border: 1px solid rgba(255,255,255,0.05);}
+.control-group label { display: block; font-size: 12px; color: #cbd5e1; margin-bottom: 8px; font-weight: 600;}
+
+/* Botones de Moto, Van, Camión */
+.flota-container { display: flex; gap: 8px; }
+.vehiculo-btn { flex: 1; background: rgba(0,0,0,0.4); border: 1px solid #334155; color: white; padding: 10px 5px; border-radius: 8px; cursor: pointer; text-align: center; transition: 0.2s; }
+.vehiculo-btn:hover { background: #334155; }
+/* Así se ve el vehículo cuando lo dejas seleccionado */
+.vehiculo-btn.active { border-color: var(--success); background: rgba(16, 185, 129, 0.15); box-shadow: 0 0 10px rgba(16, 185, 129, 0.2); }
+.vehiculo-title { font-size: 14px; font-weight: bold; display: block; margin-bottom: 2px;}
+.vehiculo-cap { font-size: 10px; color: #94a3b8; }
+
+/* Botones de acción general (Optimizar, Pausa, etc.) */
+.btn-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+button { border: none; padding: 10px; border-radius: 8px; font-weight: bold; color: white; cursor: pointer; transition: 0.2s; font-size: 13px; }
+button:disabled { opacity: 0.5; cursor: not-allowed; } /* Cuando no se pueden presionar */
+button:hover:not(:disabled) { transform: translateY(-2px); filter: brightness(1.1); } /* Efecto de que se levantan al pasar el mouse */
+
+/* Colores específicos de cada botón */
+.btn-start { background: var(--success); width: 100%; font-size: 15px; padding: 12px; box-shadow: 0 4px 15px rgba(16, 185, 129, 0.3);}
+.btn-pause { background: var(--warning); color: #000; }
+.btn-resume { background: var(--accent); }
+.btn-clear { background: var(--danger); }
+
+/* El botón oculto de descargar el TXT */
+#btnExportar { background: #475569; width: 100%; margin-top: 5px; display: none; padding: 10px; border-radius: 8px; color: white; cursor: pointer; border: none; font-weight: bold; transition: 0.2s; }
+#btnExportar:hover { background: #334155; transform: translateY(-2px); }
+
+
+/* ==========================================
+   6. LA CONSOLA DE MENSAJES (Logs)
+   ========================================== */
+
+/* El cuadrito oscuro a la izquierda que te va narrando qué hace el algoritmo */
+.log-box { 
+    height: 100px; overflow-y: auto; background: rgba(0,0,0,0.5); 
+    padding: 10px; border-radius: 8px; font-family: monospace; 
+    font-size: 11px; border: 1px solid #334155; margin-top: 5px;
+}
+/* Colores del texto que sale en la consola */
+.log-poda { color: #f87171; }   /* Rojo para advertencias y podas */
+.log-mejor { color: #34d399; }  /* Verde para nuevas mejores rutas */
+.log-info { color: #60a5fa; }   /* Azul para información normal */
